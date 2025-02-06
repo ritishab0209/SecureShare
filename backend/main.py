@@ -8,7 +8,7 @@ import string
 app = FastAPI()
 
 # Initialize Firebase
-cred = credentials.Certificate("path/to/your-firebase-key.json")  # Update with your JSON key path
+cred = credentials.Certificate("firebase-credentials.json")  # Update with your JSON key path
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
