@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { detectSecrets, redactSecrets } from "../utils/secretDetector";
+import { supabase } from "../lib/supabase";
+import { nanoid } from "nanoid";
 import type { DetectedSecret } from "../types";
 
 interface CodeEditorProps {
-  onShare: (code: string, redactedCode: string) => void;
+  onShare: (code: string, redactedCode: string, shareUrl: string) => void;
 }
 
 export function CodeEditor({ onShare }: CodeEditorProps) {
@@ -12,6 +14,7 @@ export function CodeEditor({ onShare }: CodeEditorProps) {
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState("javascript");
   const [secrets, setSecrets] = useState<DetectedSecret[]>([]);
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newCode = e.target.value;
@@ -21,26 +24,33 @@ export function CodeEditor({ onShare }: CodeEditorProps) {
   };
 
   const handleShare = async () => {
-    const redactedCode = redactSecrets(code, secrets);
-
     try {
-      const response = await fetch("http://127.0.0.1:8000/create_paste", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: redactedCode }),
+      setIsSharing(true);
+      const redactedCode = redactSecrets(code, secrets);
+      const shareId = nanoid(10);
+
+      const { error } = await supabase.from("code_snippets").insert({
+        share_id: shareId,
+        original_content: code,
+        redacted_content: redactedCode,
+        title: title || "Untitled Snippet",
+        language,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // expires 7 days from now
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create paste");
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
       }
 
-      const data = await response.json();
-      alert(`Your secure link: ${data.link}`);
+      // Generating URL
+      const shareUrl = `${window.location.origin}/share/${shareId}`;
+      onShare(code, redactedCode, shareUrl);
     } catch (error) {
       console.error("Error sharing code:", error);
-      alert("Failed to share the code. Please try again.");
+      alert("Failed to share code. Please try again.");
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -94,9 +104,10 @@ export function CodeEditor({ onShare }: CodeEditorProps) {
       <div className="flex justify-end">
         <button
           onClick={handleShare}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={isSharing || !code.trim()}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Share Securely
+          {isSharing ? "Sharing..." : "Share Securely"}
         </button>
       </div>
     </div>
