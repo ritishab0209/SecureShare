@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Shield } from 'lucide-react';
-import { CodeEditor } from './components/CodeEditor';
+import React, { useState } from "react";
+import { Shield } from "lucide-react";
+import { CodeEditor } from "./components/CodeEditor";
 
 function App() {
   const [sharedCode, setSharedCode] = useState<{
@@ -10,8 +10,6 @@ function App() {
 
   const handleShare = (original: string, redacted: string) => {
     setSharedCode({ original, redacted });
-    // In a real app, we would send this to a backend
-    // and generate a secure, time-limited sharing link
   };
 
   return (
@@ -47,7 +45,7 @@ function App() {
                 <code>{sharedCode.redacted}</code>
               </pre>
             </div>
-            
+
             <div className="text-center">
               <button
                 onClick={() => setSharedCode(null)}
